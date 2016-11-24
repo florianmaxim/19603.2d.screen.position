@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "./src/index.js",
   "scripts": {
-    "start": "budo ./src/index.js -- -t babelify",
+    "start": "budo ./src/index.js -- -t [ babelify --presets [ es2015 ] ]",
     "develop": "budo ./src/index.js --live -- -t [ babelify --presets [ es2015 ] ]",
     "build": "rollup -c && uglifyjs ./bui/index.js -cm -o ./bui/index.min.js"
   },

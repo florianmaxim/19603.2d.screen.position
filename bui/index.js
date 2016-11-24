@@ -1,6 +1,3 @@
-(function () {
-'use strict';
-
 // Polyfills
 
 if ( Number.EPSILON === undefined ) {
@@ -40247,5 +40244,3 @@ function render(){
 
 init();
 render();
-
-}());

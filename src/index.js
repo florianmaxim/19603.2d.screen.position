@@ -10,7 +10,8 @@ import {WebGLRenderer,
         Matrix4,
         Vector2,
         Raycaster,
-        PlaneGeometry} from '../lib/three/three.modules';
+        PlaneGeometry,
+        ShaderMaterial} from '../lib/three/three.modules';
 
 var renderer, camera, scene;
 var geometry,material,mesh,mesh2, mesh3, mesh4, mesh5;
@@ -18,6 +19,7 @@ var mouse = new Vector2();
 var raycaster = new Raycaster();
 var helpplane;
 var rotate=false;
+var customMaterial;
 
 console.log('intersects');
 
@@ -26,6 +28,8 @@ function init(){
 
   renderer = new WebGLRenderer({antialias:true});
   renderer.setSize(innerWidth,innerHeight);
+  renderer.setClearColor(0xffffff)
+  renderer.sortObjects = false
   document.body.appendChild(renderer.domElement);
 
   scene = new Scene();
@@ -36,7 +40,32 @@ function init(){
   geometry = new CubeGeometry( 10, 10, 10 );
   material = new MeshBasicMaterial( { color: 0xff0000, wireframe: true} );
 
+  customMaterial = new ShaderMaterial( { transparent:true,
+  	uniforms: {
+  		time: { value: 1.0 },
+  		resolution: { value: new Vector2(innerWidth,innerHeight) }
+  	},
+  	vertexShader:
+    `
+  	void main()
+  	{
+  		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+  		gl_Position = projectionMatrix * mvPosition;
+  	}`,
+  	fragmentShader:
+   `uniform vec2 resolution;//Uniform variables must be declared here first
+
+    void main() {
+        //Now we can normalize our coordinate
+        vec2 pos = gl_FragCoord.xy / resolution.xy;
+        //And create a gradient!
+        gl_FragColor = vec4(pos.y,pos.x,pos.y,pos.x);
+        gl_FragColor.a = pos.x;
+    }`
+  } );
+
   mesh = new Mesh( geometry, material );
+  mesh.rotation.y=-1;
   mesh.position.set(0,0,-20)
   scene.add( mesh );
 
@@ -86,23 +115,35 @@ function init(){
   geometry = new PlaneGeometry( 1000, 1000, 10, 10 );
   material = new MeshBasicMaterial( { color: 0xff0000, wireframe: false, transparent:true, opacity:.2} );
 
-  helpplane = new Mesh( geometry, material );
-  helpplane.position.set(0,0,-20)
+  helpplane = new Mesh( geometry, customMaterial );
+  helpplane.position.set(0,0,-15);
+  helpplane.rotation.x=Math.PI*2;
   helpplane.name = 'helpplane'
   scene.add( helpplane );
 
-  //mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-  //mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+  addEventListener('mousemove', function(event){
+    var x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    var y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    console.log(x+'-'+y)
+  })
 
   function positionOnScreen(vector, object){
-    // update the picking ray with the camera and mouse position
+
+  /* center
+  var aspect = (vector.x)/(innerWidth/innerHeight);
+      vector.y=vector.y*aspect
+
+  var aspect = vector.y/(innerWidth/innerHeight);
+      vector.x=vector.x*aspect
+  */
+
     raycaster.setFromCamera( vector, camera );
 
     var intersects = raycaster.intersectObject(helpplane);
 
     if(intersects.length>0){
       object.position.copy(intersects[0].point);
-      console.log(intersects[0].point)
+      //console.log(intersects[0].point)
     }
   }
 
@@ -112,7 +153,11 @@ function init(){
     positionOnScreen(new Vector2(-.8,-.8), mesh2);
     positionOnScreen(new Vector2(.8,-.8), mesh5);
   });
+
   addEventListener('resize', function(){
+    var asp = 1+(1/innerWidth)/(1/innerHeight);
+
+    //console.log(asp);
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
@@ -134,6 +179,8 @@ function init(){
 function render(){
   requestAnimationFrame( render );
   renderer.render(scene, camera);
+
+  customMaterial.uniforms.resolution.value = new Vector2(innerWidth,innerHeight);
 
   if(rotate)
     mesh4.rotation.y+=0.01;
